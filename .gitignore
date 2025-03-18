@@ -7,7 +7,7 @@
 *.dll
 *.so
 *.dylib
-crawler
+WC_GO
 
 # Test binary, built with `go test -c`
 
