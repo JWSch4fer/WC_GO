@@ -36,3 +36,10 @@ Run the crawler from the command line using the following syntax:
 ```
 ./wc_go <website> <maxConcurrency> <maxPages>
 ```
+
+- <website> is the starting URL to crawl.
+- <maxConcurrency> is the maximum number of concurrent HTTP requests.
+- <maxPages> is the maximum number of pages to crawl.
+
+## License
+Distributed under the MIT License. See LICENSE for more information.
