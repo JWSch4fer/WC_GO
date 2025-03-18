@@ -41,5 +41,12 @@ Run the crawler from the command line using the following syntax:
 - <maxConcurrency> is the maximum number of concurrent HTTP requests.
 - <maxPages> is the maximum number of pages to crawl.
 
+
+## Testing
+To run the tests, execute:
+```
+go test ./...
+```
+
 ## License
 Distributed under the MIT License. See LICENSE for more information.
