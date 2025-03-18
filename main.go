@@ -3,73 +3,72 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http"
+	"net/url"
 	"os"
-	"strings"
+	"strconv"
+	"sync"
 	"time"
 )
 
+type config struct {
+	pages              map[string]int
+	baseURL            *url.URL
+	mu                 *sync.Mutex
+	concurrencyControl chan struct{}
+	wg                 *sync.WaitGroup
+	maxPages           int
+}
+
 func main() {
 
-	// map of the available cli commands
+	//make sure a website was provided
 	args := os.Args
+	if len(os.Args) != 4 {
+		fmt.Println("Usage: WC_GO <website> <maxConcurrency> <maxPages>")
+		os.Exit(1)
+	}
 
-	if len(args) == 1 {
-		fmt.Printf("no website provided\n")
+	maxConcurrency, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		fmt.Printf("effor parsing maxConcurrency: %v\n", err)
 		os.Exit(1)
 	}
-	if len(args) > 2 {
-		fmt.Printf("too many arguments provided\n")
-		os.Exit(1)
+
+	maxPages, err := strconv.Atoi(os.Args[3])
+	if err != nil {
+		fmt.Printf("error parsing maxPages: %v\n", err)
 	}
+
+	//parse the input to start crawling
+	rawURL := os.Args[1]
+	parsedBase, err := url.Parse(rawURL)
+	if err != nil {
+		fmt.Printf("Error parsing base URL %q: %v\n", rawURL, err)
+	}
+
 	fmt.Printf("starting crawl of: %s\n", args[1])
-	// raw_HTML, err := getHTML(args[1])
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	os.Exit(1)
-	// }
-	// fmt.Printf("%s\n", raw_HTML)
 
-	pages := make(map[string]int)
+	//create the config struct
+	cfg := &config{
+		pages:              make(map[string]int),
+		baseURL:            parsedBase,
+		mu:                 &sync.Mutex{},
+		concurrencyControl: make(chan struct{}, maxConcurrency),
+		wg:                 &sync.WaitGroup{},
+		maxPages:           maxPages,
+	}
+
+	//context to monitor the amount of runtime
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	//start crawling
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-	crawlPage(ctx, args[1], args[1], pages)
+	cfg.crawlPage(ctx, rawURL)
+	cfg.wg.Wait() //wait for all requests to complete
 
 	fmt.Printf("\nCrawling pages:\n")
-	for page, count := range pages {
+	for page, count := range cfg.pages {
 		fmt.Printf(" %d -> %s\n", count, page)
 	}
 
-}
-
-// getHTML fetches the HTML from rawURL, ensuring the response is both valid
-func getHTML(rawURL string) (string, error) {
-
-	resp, err := http.Get(rawURL)
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch the webpage: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Check for 4xx or 5xx status codes
-	if resp.StatusCode >= 400 {
-		return "", fmt.Errorf("received an error status code: %d", resp.StatusCode)
-	}
-
-	// Verify the response is text/html
-	contentType := resp.Header.Get("Content-Type")
-	if !strings.Contains(contentType, "text/html") {
-		return "", fmt.Errorf("expected 'text/html' content type but got '%s'", contentType)
-	}
-
-	// Read the response body
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("error reading response body: %w", err)
-	}
-
-	return string(bodyBytes), nil
 }

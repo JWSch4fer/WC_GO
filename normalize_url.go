@@ -12,6 +12,13 @@ func normalizeURL(input string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	normalizedPath := strings.TrimSuffix(parsedURL.Path, "/")
-	return parsedURL.Host + normalizedPath, nil
+
+	path := parsedURL.Path
+	if path == "" {
+		//there was no provided path
+		path = "/"
+	} else {
+		path = strings.TrimSuffix(path, "/")
+	}
+	return parsedURL.Host + path, nil
 }
