@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -22,12 +24,25 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("starting crawl of: %s\n", args[1])
-	raw_HTML, err := getHTML(args[1])
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	// raw_HTML, err := getHTML(args[1])
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	os.Exit(1)
+	// }
+	// fmt.Printf("%s\n", raw_HTML)
+
+	pages := make(map[string]int)
+
+	//start crawling
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	crawlPage(ctx, args[1], args[1], pages)
+
+	fmt.Printf("\nCrawling pages:\n")
+	for page, count := range pages {
+		fmt.Printf(" %d -> %s\n", count, page)
 	}
-	fmt.Printf("%s\n", raw_HTML)
+
 }
 
 // getHTML fetches the HTML from rawURL, ensuring the response is both valid
