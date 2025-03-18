@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -66,9 +67,42 @@ func main() {
 	cfg.crawlPage(ctx, rawURL)
 	cfg.wg.Wait() //wait for all requests to complete
 
-	fmt.Printf("\nCrawling pages:\n")
-	for page, count := range cfg.pages {
-		fmt.Printf(" %d -> %s\n", count, page)
+	// fmt.Printf("\nCrawling pages:\n")
+	// for page, count := range cfg.pages {
+	// 	fmt.Printf(" %d -> %s\n", count, page)
+	// }
+
+	printReport(cfg.pages, rawURL)
+
+}
+
+func printReport(pages map[string]int, baseURL string) {
+	fmt.Println("=====================================================")
+	fmt.Printf("         REPORT for %s\n", baseURL)
+	fmt.Println("=====================================================")
+
+	// Create a slice of structs to sort the pages
+	type pageCount struct {
+		page  string
+		count int
+	}
+
+	var pageCounts []pageCount
+	for page, count := range pages {
+		pageCounts = append(pageCounts, pageCount{page, count})
+	}
+
+	//sort by count in descending order
+	//then alphabetically if they are equal counts
+	sort.Slice(pageCounts, func(i, j int) bool {
+		if pageCounts[i].count == pageCounts[j].count {
+			return pageCounts[i].page < pageCounts[j].page
+		}
+		return pageCounts[i].count > pageCounts[j].count
+	})
+
+	for _, pc := range pageCounts {
+		fmt.Printf("Found %d internal links to %s\n", pc.count, pc.page)
 	}
 
 }
